@@ -1,0 +1,10 @@
+project_id = "hotgpgqdcgwbgidfyluf"
+
+[functions.plan-trip]
+verify_jwt = false
+
+[functions.get-weather]
+verify_jwt = false
+
+[functions.get-poi]
+verify_jwt = false
