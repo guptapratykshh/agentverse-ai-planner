@@ -6,17 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Approximate coordinates for common destinations
-const locationCoords: Record<string, { lat: number; lon: number }> = {
-  denver: { lat: 39.7392, lon: -104.9903 },
-  colorado: { lat: 39.5501, lon: -105.7821 },
-  "new york": { lat: 40.7128, lon: -74.006 },
-  "san francisco": { lat: 37.7749, lon: -122.4194 },
-  london: { lat: 51.5074, lon: -0.1278 },
-  paris: { lat: 48.8566, lon: 2.3522 },
-  tokyo: { lat: 35.6762, lon: 139.6503 },
-};
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -26,9 +15,30 @@ serve(async (req) => {
     const { destination, interests } = await req.json();
     console.log("Fetching POIs for:", destination, "interests:", interests);
 
-    // Get coordinates (default to Colorado if not found)
-    const normalizedDest = destination.toLowerCase();
-    const coords = locationCoords[normalizedDest] || locationCoords["colorado"];
+    // Use Nominatim to geocode the destination
+    const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1`;
+    const geocodeResponse = await fetch(geocodeUrl, {
+      headers: {
+        "User-Agent": "TravelPlannerAgent/1.0",
+      },
+    });
+
+    if (!geocodeResponse.ok) {
+      throw new Error(`Geocoding failed: ${geocodeResponse.status}`);
+    }
+
+    const geocodeData = await geocodeResponse.json();
+    
+    if (!geocodeData || geocodeData.length === 0) {
+      throw new Error(`Location "${destination}" not found`);
+    }
+
+    const coords = {
+      lat: parseFloat(geocodeData[0].lat),
+      lon: parseFloat(geocodeData[0].lon),
+    };
+    
+    console.log("Geocoded coordinates:", coords);
 
     // Build Overpass QL query based on interests
     const radius = 20000; // 20km radius
